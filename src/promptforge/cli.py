@@ -30,6 +30,7 @@ def _main(ctx: typer.Context) -> None:
 def _show_welcome() -> None:
     import os
 
+    from rich.console import Group
     from rich.padding import Padding
     from rich.panel import Panel
     from rich.rule import Rule
@@ -39,61 +40,75 @@ def _show_welcome() -> None:
     console = Console(stderr=True)
     cwd = os.path.basename(os.getcwd()) or os.getcwd()
 
-    # ── Header line (above the box, like "claude claude  Claude Code v2.x") ──
-    header = Text()
-    header.append("[+ promptforge promptforge]", style="bold cyan")
-    console.print(header)
+    # ── Header line above the box ────────────────────────────────────────────
+    console.print(Text("[+ promptforge promptforge]", style="bold cyan"))
     console.print(Rule(f"[bold]PromptForge[/bold] [dim]v{__version__}[/dim]", style="cyan"))
 
-    # ── Left column: branding ────────────────────────────────────────────────
-    left = Text(justify="center")
-    left.append("\nWelcome to\n\n", style="white")
-    left.append("⚡PromptForge!\n", style="bold cyan")
-    left.append("\n")
-    left.append(
-        "▀█████████▀\n"
-        " ▀███████▀\n"
-        "  ▀█████▀\n"
-        "   ▀███▀\n"
-        "    ▀█▀\n"
-        "     ▀\n",
-        style="cyan",
-    )
-    left.append(f"\nv{__version__}\n", style="dim")
-    left.append(f"~/{cwd}\n", style="dim")
+    # ── ASCII art: "PROMPT" row (cyan) ───────────────────────────────────────
+    _PROMPT = [
+        "██████╗ ██████╗  ██████╗ ███╗   ███╗██████╗ ████████╗",
+        "██╔══██╗██╔══██╗██╔═══██╗████╗ ████║██╔══██╗╚══██╔══╝",
+        "██████╔╝██████╔╝██║   ██║██╔████╔██║██████╔╝   ██║   ",
+        "██╔═══╝ ██╔══██╗██║   ██║██║╚██╔╝██║██╔═══╝    ██║   ",
+        "██║     ██║  ██║╚██████╔╝██║ ╚═╝ ██║██║        ██║   ",
+        "╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚═╝        ╚═╝   ",
+    ]
+    # ── ASCII art: "FORGE" row (cyan) + "!" (bold yellow) ───────────────────
+    _FORGE = [
+        "███████╗ ██████╗ ██████╗  ██████╗ ███████╗",
+        "██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██╔════╝",
+        "█████╗  ██║   ██║██████╔╝██║  ███╗█████╗  ",
+        "██╔══╝  ██║   ██║██╔══██╗██║   ██║██╔══╝  ",
+        "██║     ╚██████╔╝██║  ██║╚██████╔╝███████╗",
+        "╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝",
+    ]
+    _EXCL = [   # same height as _FORGE, rendered in yellow
+        "  ██╗██╗",
+        "  ██║██║",
+        "  ██║██║",
+        "  ╚═╝╚═╝",
+        "  ██╗██╗",
+        "  ╚═╝╚═╝",
+    ]
 
-    # ── Right column: tips + what is ────────────────────────────────────────
-    right = Text()
-    right.append("\nTips for getting started\n", style="bold yellow")
-    right.append("Configure your provider, then run on any vague prompt.\n\n", style="")
-    right.append("  promptforge configure\n", style="cyan")
-    right.append("    Pick a provider and validate your API key.\n\n", style="dim")
-    right.append("  promptforge run \"help me fix the code\"\n", style="cyan")
-    right.append("    Analyse → ask → synthesize (one LLM call).\n\n", style="dim")
-    right.append("  promptforge correct my_prompt.txt\n", style="cyan")
-    right.append("    Optimise an existing prompt file.\n\n", style="dim")
-    right.append("  promptforge run \"...\" --diff\n", style="cyan")
-    right.append("    Show before/after token comparison.\n\n", style="dim")
-    right.append("  promptforge stats --reuse 10\n", style="cyan")
-    right.append("    See savings at 10× prompt reuse.\n\n", style="dim")
+    art = Text()
+    art.append("\n")
+    for line in _PROMPT:
+        art.append(f" {line}\n", style="bold cyan")
+    for forge_line, excl_line in zip(_FORGE, _EXCL, strict=True):
+        art.append(f" {forge_line}", style="bold cyan")
+        art.append(f"{excl_line}\n", style="bold yellow")
+    art.append(f"\n v{__version__}  ·  ~/{cwd}\n", style="dim")
 
-    right.append("What's new\n", style="bold yellow")
-    right.append("Rule-based vagueness detection across 7 dimensions.\n", style="dim")
-    right.append("Single LLM call per session — no token waste.\n", style="dim")
-    right.append("Auto-copies result to clipboard after every run.\n", style="dim")
-    right.append("Ratings + token savings tracked in usage_log.jsonl.\n", style="dim")
-    right.append("Providers: OpenAI · Anthropic · Gemini · Mistral · Groq · Copilot\n", style="dim")
+    # ── Tips (left) and What's new (right) below the art ────────────────────
+    tips = Text()
+    tips.append("Tips for getting started\n", style="bold yellow")
+    tips.append("Run configure to set up your key\n\n", style="dim")
+    tips.append("promptforge configure\n", style="cyan")
+    tips.append("promptforge run \"fix my code\"\n", style="cyan")
+    tips.append("promptforge correct file.txt\n", style="cyan")
+    tips.append("promptforge run \"...\" --diff\n", style="cyan")
+    tips.append("promptforge stats --reuse 10\n", style="cyan")
+    tips.append("promptforge --help\n", style="cyan")
 
-    # ── Two-column grid ──────────────────────────────────────────────────────
-    grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column(ratio=2, min_width=22)
-    grid.add_column(ratio=5)
-    grid.add_row(
-        Padding(left, (0, 1)),
-        Padding(right, (0, 1)),
-    )
+    news = Text()
+    news.append("What's new\n", style="bold yellow")
+    news.append("7-dimension vagueness detection\n", style="dim")
+    news.append("One API call per session\n", style="dim")
+    news.append("Auto-copies result to clipboard\n", style="dim")
+    news.append("Ratings + token analytics saved\n", style="dim")
+    news.append("\nProviders\n", style="bold yellow")
+    news.append("OpenAI · Anthropic · Gemini\n", style="dim")
+    news.append("Mistral · Groq · Copilot\n", style="dim")
 
-    console.print(Panel(grid, border_style="cyan", padding=(0, 0)))
+    bottom_grid = Table.grid(expand=True, padding=(0, 0))
+    bottom_grid.add_column(ratio=1)
+    bottom_grid.add_column(ratio=1)
+    bottom_grid.add_row(Padding(tips, (0, 2)), Padding(news, (0, 1)))
+
+    content = Group(art, Rule(style="dim cyan"), Padding(bottom_grid, (0, 1)))
+
+    console.print(Panel(content, border_style="cyan", padding=(0, 0)))
     console.print()
 
 _MAX_FILE_SIZE = 50 * 1024  # 50KB
