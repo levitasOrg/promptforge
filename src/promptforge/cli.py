@@ -658,8 +658,13 @@ def _run_pipeline(
         _console.print("  Hint: Free-tier accounts have strict per-minute limits.")
         _console.print("        Wait 60 seconds and try again, or upgrade to a paid plan.")
         raise typer.Exit(2)
-    except (litellm.Timeout, litellm.APIConnectionError) as e:  # type: ignore[attr-defined]
-        _console.print(f"✗ Could not reach {config.provider}.")
+    except litellm.Timeout as e:  # type: ignore[attr-defined]
+        _console.print(f"✗ Request to {config.provider} timed out.")
+        _console.print(f"  Detail: {e}")
+        _console.print("  Hint: The model may be under heavy load — wait a moment and try again.")
+        raise typer.Exit(2)
+    except litellm.APIConnectionError as e:  # type: ignore[attr-defined]
+        _console.print(f"✗ Could not connect to {config.provider}.")
         _console.print(f"  Detail: {e}")
         _console.print("  Hint: Check your network connection and try again.")
         raise typer.Exit(2)

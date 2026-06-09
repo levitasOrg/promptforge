@@ -70,7 +70,8 @@ class UsageLogger:
     def reset(self, skip_confirmation: bool = False) -> None:
         if not skip_confirmation:
             if not sys.stdin.isatty():
-                sys.exit("Refusing to reset without --yes in non-interactive mode.")
+                print("Error: Refusing to reset without --yes in non-interactive mode.", file=sys.stderr)
+                sys.exit(1)
             records = self.load_all()
             confirm = input(f"This will delete {len(records)} sessions. Type 'yes' to confirm: ")
             if confirm.strip().lower() != "yes":
