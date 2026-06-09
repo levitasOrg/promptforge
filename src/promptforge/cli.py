@@ -327,15 +327,47 @@ def correct(
 
 @app.command()
 def stats(
-    detailed: bool = typer.Option(False, "--detailed"),
-    reuse: int = typer.Option(1, "--reuse"),
-    last: int | None = typer.Option(None, "--last"),
-    reset: bool = typer.Option(False, "--reset"),
-    yes: bool = typer.Option(False, "--yes"),
-    export: str | None = typer.Option(None, "--export"),
+    detailed: bool = typer.Option(False, "--detailed", help="Show per-session table."),
+    reuse: int = typer.Option(1, "--reuse", help="Project savings at N× reuse per prompt."),
+    last: int = typer.Option(0, "--last", help="Limit to last N sessions (0 = all)."),
+    reset: bool = typer.Option(False, "--reset", help="Delete usage log after confirmation."),
+    yes: bool = typer.Option(False, "--yes", help="Skip confirmation for --reset."),
+    export: str | None = typer.Option(None, "--export", help="Write merged records as JSON array to file."),
 ) -> None:
-    """Show token savings analytics from session history."""
-    _not_implemented("stats")
+    """Show token savings analytics from your session history."""
+    from pathlib import Path
+    from promptforge.stats.logger import UsageLogger
+    from promptforge.stats.display import StatsRenderer
+
+    usage_logger = UsageLogger()
+    renderer = StatsRenderer()
+
+    if reset:
+        try:
+            usage_logger.reset(skip_confirmation=yes)
+        except SystemExit as e:
+            Console(stderr=True).print(f"[red]{e}[/red]")
+            raise typer.Exit(1)
+        Console(stderr=True).print("[green]✓ Usage log reset.[/green]")
+        return
+
+    if export:
+        usage_logger.export(Path(export))
+        Console(stderr=True).print(f"[green]✓ Exported to {export}[/green]")
+        return
+
+    records = usage_logger.load_all()
+    if last > 0:
+        from promptforge.stats.engine import StatsEngine
+        records = StatsEngine().filter_last(records, last)
+
+    if detailed:
+        renderer.render_detailed(records)
+
+    renderer.render_summary(records, reuse_n=reuse)
+
+    if reuse > 1:
+        renderer.render_projection(records, reuse)
 
 
 @app.command()
