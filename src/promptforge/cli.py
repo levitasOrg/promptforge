@@ -21,10 +21,275 @@ app.add_typer(repo_app, name="repo")
 
 @app.callback()
 def _main(ctx: typer.Context) -> None:
-    """Show welcome banner when called with no subcommand."""
+    """Launch PromptForge interactive session."""
     if ctx.invoked_subcommand is None:
         _show_welcome()
+        _repl()
         raise typer.Exit(0)
+
+
+# ── Slash-command REPL ────────────────────────────────────────────────────────
+
+_HELP_TEXT = """\
+/run <prompt>       optimise a prompt (asks clarifying questions)
+/quick <prompt>     optimise a prompt, skip all questions
+/batch <prompt>     optimise a prompt, show all questions at once
+/load <file>        load a prompt from a file and optimise it
+/diff <prompt>      optimise and show before/after token comparison
+/configure          set up provider and API key
+/stats              show token savings analytics
+/stats reset        clear session history
+/history            show your last 10 sessions
+/clear              clear the terminal
+/help               show this list
+/exit               quit PromptForge"""
+
+
+def _repl() -> None:
+    """Interactive REPL — stays open until /exit or Ctrl+D."""
+    import os
+    import readline  # enables arrow-key history in the prompt on macOS/Linux  # noqa: F401
+
+    console = Console(stderr=True)
+    console.print(
+        "\n[dim]Type [cyan]/help[/cyan] for commands, [cyan]/exit[/cyan] to quit. "
+        "Or just type a prompt and press Enter to optimise it.[/dim]\n"
+    )
+
+    while True:
+        try:
+            raw = input("⚡ promptforge > ").strip()
+        except (EOFError, KeyboardInterrupt):
+            console.print("\n[dim]Goodbye.[/dim]")
+            break
+
+        if not raw:
+            continue
+
+        # Bare text (no slash) → treat as /run
+        if not raw.startswith("/"):
+            _repl_run(raw, diff=False, batch=False, no_questions=False)
+            continue
+
+        parts = raw[1:].split(None, 1)
+        cmd = parts[0].lower()
+        arg = parts[1].strip() if len(parts) > 1 else ""
+
+        if cmd in ("exit", "quit"):
+            console.print("[dim]Goodbye.[/dim]")
+            break
+
+        elif cmd == "help":
+            console.print(_HELP_TEXT)
+
+        elif cmd == "clear":
+            os.system("clear")
+
+        elif cmd == "run":
+            if not arg:
+                console.print("[red]Usage: /run <prompt>[/red]")
+            else:
+                _repl_run(arg, diff=False, batch=False, no_questions=False)
+
+        elif cmd == "quick":
+            if not arg:
+                console.print("[red]Usage: /quick <prompt>[/red]")
+            else:
+                _repl_run(arg, diff=False, batch=False, no_questions=True)
+
+        elif cmd == "batch":
+            if not arg:
+                console.print("[red]Usage: /batch <prompt>[/red]")
+            else:
+                _repl_run(arg, diff=False, batch=True, no_questions=False)
+
+        elif cmd == "diff":
+            if not arg:
+                console.print("[red]Usage: /diff <prompt>[/red]")
+            else:
+                _repl_run(arg, diff=True, batch=False, no_questions=False)
+
+        elif cmd == "load":
+            if not arg:
+                console.print("[red]Usage: /load <file>[/red]")
+            else:
+                p = Path(arg)
+                if not p.exists():
+                    console.print(f"[red]File not found: {arg}[/red]")
+                elif p.stat().st_size > 50 * 1024:
+                    console.print("[red]File too large (max 50KB).[/red]")
+                else:
+                    _repl_run(p.read_text(encoding="utf-8"), diff=False, batch=False, no_questions=False)
+
+        elif cmd == "configure":
+            _repl_configure(console)
+
+        elif cmd == "stats":
+            if arg.lower() == "reset":
+                _repl_stats_reset(console)
+            else:
+                _repl_stats(console)
+
+        elif cmd == "history":
+            _repl_history(console)
+
+        else:
+            console.print(f"[red]Unknown command: /{cmd}[/red]  — type /help for the full list.")
+
+
+def _repl_run(
+    raw_prompt: str,
+    *,
+    diff: bool,
+    batch: bool,
+    no_questions: bool,
+) -> None:
+    """Run the full optimisation pipeline inside the REPL."""
+    import contextlib
+    with contextlib.suppress(SystemExit):
+        _run_pipeline(
+            raw_prompt=raw_prompt,
+            diff=diff,
+            output=None,
+            batch=batch,
+            no_questions=no_questions,
+            no_clipboard=False,
+            debug=False,
+        )
+
+
+def _repl_configure(console: Console) -> None:
+    """Trigger the configure wizard from inside the REPL."""
+    import getpass
+
+    from promptforge.config.providers import COPILOT_BASE_URL, ProviderRegistry
+
+    registry = ProviderRegistry()
+    providers = registry.get_providers()
+
+    console.print("\n[bold]Select your LLM provider:[/bold]")
+    for i, p in enumerate(providers, 1):
+        console.print(f"  {i}. {p.display_name}")
+
+    while True:
+        try:
+            choice = input("Provider number: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(providers):
+                selected_provider = providers[idx]
+                break
+        except ValueError:
+            pass
+        console.print("[red]Invalid choice.[/red]")
+
+    console.print(f"\n[bold]Select a model for {selected_provider.display_name}:[/bold]")
+    for i, m in enumerate(selected_provider.models, 1):
+        star = " ★" if m.is_recommended else ""
+        console.print(f"  {i}. {m.display_name}{star}")
+
+    while True:
+        try:
+            choice = input("Model number: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(selected_provider.models):
+                selected_model = selected_provider.models[idx]
+                break
+        except ValueError:
+            pass
+        console.print("[red]Invalid choice.[/red]")
+
+    console.print(f"\n{selected_provider.auth_label}: ", end="")
+    try:
+        key = getpass.getpass(prompt="")
+    except (EOFError, KeyboardInterrupt):
+        return
+
+    base_url = COPILOT_BASE_URL if selected_provider.id == "copilot" else None
+    config = AppConfig(
+        provider=selected_provider.id,
+        model=selected_model.id,
+        api_key=key,
+        litellm_model_string=selected_model.litellm_string,
+        litellm_base_url=base_url,
+    )
+
+    from promptforge.config.manager import ConfigManager
+    manager = ConfigManager()
+    for attempt in range(1, 4):
+        console.print(f"\n[dim]Validating key (attempt {attempt}/3)...[/dim]")
+        try:
+            valid = manager.validate_key(config)
+        except Exception as e:
+            console.print(f"[red]Validation error: {e}[/red]")
+            valid = False
+        if valid:
+            break
+        console.print("[red]✗ Key rejected. Try again.[/red]")
+        if attempt < 3:
+            console.print(f"{selected_provider.auth_label}: ", end="")
+            try:
+                key = getpass.getpass(prompt="")
+            except (EOFError, KeyboardInterrupt):
+                return
+            config = AppConfig(
+                provider=selected_provider.id,
+                model=selected_model.id,
+                api_key=key,
+                litellm_model_string=selected_model.litellm_string,
+                litellm_base_url=base_url,
+            )
+    else:
+        console.print("[red]✗ Failed after 3 attempts.[/red]")
+        return
+
+    manager.save(config)
+    console.print(f"\n[green]✓ Config saved. Using {selected_provider.display_name} / {selected_model.id}[/green]\n")
+
+
+def _repl_stats(console: Console) -> None:
+    from promptforge.stats.display import StatsRenderer
+    from promptforge.stats.logger import UsageLogger
+    records = UsageLogger().load_all()
+    StatsRenderer().render_summary(records)
+
+
+def _repl_stats_reset(console: Console) -> None:
+    from promptforge.stats.logger import UsageLogger
+    logger = UsageLogger()
+    records = logger.load_all()
+    try:
+        confirm = input(f"Delete {len(records)} sessions? Type 'yes' to confirm: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return
+    if confirm.lower() == "yes":
+        logger.reset(skip_confirmation=True)
+        console.print("[green]✓ Session history cleared.[/green]")
+    else:
+        console.print("[dim]Cancelled.[/dim]")
+
+
+def _repl_history(console: Console) -> None:
+    from promptforge.stats.logger import UsageLogger
+    records = UsageLogger().load_all()
+    if not records:
+        console.print("[dim]No sessions yet.[/dim]")
+        return
+    console.print()
+    for r in records[-10:]:
+        rating = "👍" if r.rating == 1 else "👎" if r.rating == -1 else "·"
+        console.print(
+            f"  [dim]{r.timestamp[:10]}[/dim]  "
+            f"[cyan]{r.provider}/{r.model}[/cyan]  "
+            f"{r.original_token_estimate}t → {r.optimized_token_estimate}t  "
+            f"{rating}"
+        )
+    console.print()
 
 
 def _show_welcome() -> None:
