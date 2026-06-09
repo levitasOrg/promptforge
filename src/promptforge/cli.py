@@ -1,8 +1,10 @@
 import sys
 
 import typer
+from rich.console import Console
 
 from promptforge import __version__
+from promptforge.config.models import AppConfig
 
 app = typer.Typer(
     name="promptforge",
@@ -21,7 +23,89 @@ def _not_implemented(command: str) -> None:
 @app.command()
 def configure() -> None:
     """First-run setup wizard. Select provider, model, enter API key."""
-    _not_implemented("configure")
+    from promptforge.config.manager import ConfigManager
+    from promptforge.config.providers import ProviderRegistry, COPILOT_BASE_URL
+
+    console = Console(stderr=True)
+    registry = ProviderRegistry()
+    providers = registry.get_providers()
+
+    # Step 1: Show provider list
+    console.print("\n[bold]Select your LLM provider:[/bold]")
+    for i, provider in enumerate(providers, 1):
+        console.print(f"  {i}. {provider.display_name}")
+
+    while True:
+        choice = typer.prompt("Provider number", err=True)
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(providers):
+                selected_provider = providers[idx]
+                break
+        except ValueError:
+            pass
+        console.print("[red]Invalid choice.[/red]")
+
+    # Step 2: Show model list
+    console.print(f"\n[bold]Select a model for {selected_provider.display_name}:[/bold]")
+    for i, model in enumerate(selected_provider.models, 1):
+        star = " ★" if model.is_recommended else ""
+        console.print(f"  {i}. {model.display_name}{star}")
+
+    while True:
+        choice = typer.prompt("Model number", err=True)
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(selected_provider.models):
+                selected_model = selected_provider.models[idx]
+                break
+        except ValueError:
+            pass
+        console.print("[red]Invalid choice.[/red]")
+
+    # Step 3: API key input (hidden)
+    key = typer.prompt(selected_provider.auth_label, hide_input=True, err=True)
+
+    # Determine base_url for Copilot
+    base_url = COPILOT_BASE_URL if selected_provider.id == "copilot" else None
+
+    config = AppConfig(
+        provider=selected_provider.id,
+        model=selected_model.id,
+        api_key=key,
+        litellm_model_string=selected_model.litellm_string,
+        litellm_base_url=base_url,
+    )
+
+    # Step 4: Validate key (max 3 attempts)
+    manager = ConfigManager()
+    for attempt in range(1, 4):
+        console.print(f"\n[dim]Validating key (attempt {attempt}/3)...[/dim]")
+        try:
+            valid = manager.validate_key(config)
+        except Exception as e:
+            console.print(f"[red]Validation error: {e}[/red]")
+            valid = False
+
+        if valid:
+            break
+        console.print("[red]✗ Key rejected by provider. Check your key and try again.[/red]")
+        if attempt < 3:
+            key = typer.prompt(selected_provider.auth_label, hide_input=True, err=True)
+            config = AppConfig(
+                provider=selected_provider.id,
+                model=selected_model.id,
+                api_key=key,
+                litellm_model_string=selected_model.litellm_string,
+                litellm_base_url=base_url,
+            )
+    else:
+        console.print("[red]✗ Failed after 3 attempts.[/red]")
+        raise typer.Exit(2)
+
+    # Step 5: Save
+    manager.save(config)
+    console.print(f"\n[green]✓ Key validated. Config saved to {manager.config_path}[/green]")
 
 
 @app.command()
