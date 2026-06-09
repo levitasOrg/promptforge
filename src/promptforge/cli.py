@@ -50,6 +50,7 @@ _HELP_TEXT = """\
 /stats                    show token savings analytics
 /stats reset              clear session history
 /history                  show your last 10 sessions
+/version                  show installed PromptForge version
 /clear                    clear the terminal
 /help                     show this list
 /exit                     quit PromptForge"""
@@ -148,6 +149,9 @@ def _repl() -> None:
 
         elif cmd == "repo":
             _repl_repo(console, arg)
+
+        elif cmd == "version":
+            console.print(f"promptforge {__version__}")
 
         else:
             console.print(f"[red]Unknown command: /{cmd}[/red]  — type /help for the full list.")
@@ -968,6 +972,40 @@ def version() -> None:
     """Print the installed PromptForge version."""
     # NOTE: version is one of the few things that goes to stdout — it's the user's request.
     typer.echo(f"promptforge {__version__}")
+
+
+@app.command()
+def uninstall() -> None:
+    """Remove all PromptForge data (config, usage log, keychain entry)."""
+    from promptforge.config.manager import ConfigManager, CONFIG_PATH
+    from promptforge.stats.logger import UsageLogger
+
+    console = Console(stderr=True)
+    console.print("\n[bold yellow]This will delete:[/bold yellow]")
+    console.print(f"  • Config file: {CONFIG_PATH}")
+    console.print(f"  • Usage log:   {CONFIG_PATH.parent / 'usage_log.jsonl'}")
+    console.print("  • API key from system keychain\n")
+
+    confirm = typer.confirm("Continue?", default=False)
+    if not confirm:
+        console.print("[dim]Aborted.[/dim]")
+        raise typer.Exit(0)
+
+    # Remove config + keychain entry
+    manager = ConfigManager()
+    manager.delete()
+    console.print("✓ Config and keychain entry removed.")
+
+    # Remove usage log
+    log_path = CONFIG_PATH.parent / "usage_log.jsonl"
+    if log_path.exists():
+        log_path.unlink()
+        console.print("✓ Usage log removed.")
+
+    console.print("\n[green]All PromptForge data removed.[/green]")
+    console.print("To remove the package itself, run:")
+    console.print("  [cyan]pipx uninstall promptforge-cli[/cyan]   # if installed via pipx")
+    console.print("  [cyan]pip uninstall promptforge-cli[/cyan]    # if installed via pip")
 
 
 @repo_app.command("add")

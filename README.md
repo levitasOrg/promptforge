@@ -42,53 +42,77 @@ PromptForge fixes both. It asks the right questions upfront, then synthesises a 
 | Requirement | Version |
 |---|---|
 | Python | 3.11 or higher |
-| Operating system | macOS or Linux (including WSL) |
-| Native Windows | ❌ Not supported |
+| Operating system | macOS, Linux, Windows |
 
 Check your Python version:
 ```bash
-python3 --version
+python3 --version   # macOS / Linux
+python --version    # Windows
 ```
 
 ---
 
 ## Installation
 
-### Option 1 — pip (recommended)
+### macOS
 
 ```bash
-pip3 install promptforge
+# Install pipx (recommended for CLI tools)
+brew install pipx
+pipx ensurepath
+
+# Install PromptForge
+pipx install promptforge-cli
 ```
 
-### Option 2 — pipx (isolated environment, no conflicts)
+### Windows
 
 ```bash
-# Install pipx if you don't have it
+# Install pipx
+python -m pip install pipx
+python -m pipx ensurepath
+
+# Open a new terminal, then install PromptForge
+python -m pipx install promptforge-cli
+```
+
+### Linux
+
+```bash
+# Install pipx
 pip3 install pipx
 pipx ensurepath
 
-# Then install PromptForge
-pipx install promptforge
+# Install PromptForge
+pipx install promptforge-cli
 ```
 
-### Option 3 — From source
+### Option — pip (if pipx not available)
 
 ```bash
-git clone https://github.com/your-org/promptforge
+pip3 install promptforge-cli   # macOS / Linux
+pip install promptforge-cli    # Windows
+```
+
+### Option — From source
+
+```bash
+git clone https://github.com/levitasOrg/promptforge
 cd promptforge
 
 # Create and activate a virtual environment
 python3 -m venv .venv
-source .venv/bin/activate   # macOS / Linux
+source .venv/bin/activate       # macOS / Linux
+.venv\Scripts\activate          # Windows
 
-# Install from pyproject.toml
-pip install -e .
+# Install with dev dependencies
+pip install -e ".[dev]"
 ```
 
 ### Verify the installation
 
 ```bash
-promptforge
+promptforge --help
 ```
 
 You should see the PromptForge welcome banner with available commands listed.
@@ -360,7 +384,39 @@ promptforge stats --export sessions.json
 
 ```bash
 promptforge version
-# promptforge 1.0.0
+# promptforge 1.0.2
+```
+
+Also available inside the REPL:
+```
+⚡ promptforge > /version
+promptforge 1.0.2
+```
+
+---
+
+### `promptforge uninstall`
+
+Remove all local PromptForge data — config file, usage log, and API key from the system keychain. Asks for confirmation before deleting.
+
+```bash
+promptforge uninstall
+```
+
+```
+This will delete:
+  • Config file: ~/.config/promptforge/config.toml
+  • Usage log:   ~/.config/promptforge/usage_log.jsonl
+  • API key from system keychain
+
+Continue? [y/N]: y
+✓ Config and keychain entry removed.
+✓ Usage log removed.
+
+All PromptForge data removed.
+To remove the package itself, run:
+  pipx uninstall promptforge-cli   # if installed via pipx
+  pip uninstall promptforge-cli    # if installed via pip
 ```
 
 ---
@@ -481,7 +537,7 @@ Located at `~/.config/promptforge/config.toml`. Created automatically by `prompt
 [llm]
 provider = "anthropic"
 model = "claude-haiku-3-5"
-api_key = "sk-ant-..."
+api_key = "__keyring__"
 litellm_model_string = "anthropic/claude-haiku-3-5"
 
 [preferences]
@@ -490,7 +546,7 @@ show_diff = false
 default_inject_code = false
 ```
 
-**File permissions:** set to `600` (owner read/write only) on macOS and Linux. Your API key never leaves this file.
+**API key security:** your API key is stored in the OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service) — not in the config file. The config file stores `__keyring__` as a pointer. If the keychain is unavailable, the key falls back to plain text in the config file with permissions `600` (owner read/write only) on macOS and Linux.
 
 To change provider, model, or key — just re-run `promptforge configure`. It overwrites the existing config.
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "promptforge-cli"
-version = "1.0.1"
+version = "1.0.2"
 description = "Turn vague prompts into structured, token-efficient prompts from your terminal."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,6 +28,7 @@ dependencies = [
     "pyperclip>=1.8,<2.0",
     "readchar>=4.0,<5.0",
     "tomli-w>=1.0,<2.0",
+    "keyring>=24.0,<26.0",
 ]
 
 [project.optional-dependencies]

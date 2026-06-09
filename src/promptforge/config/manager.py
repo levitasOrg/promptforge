@@ -1,5 +1,6 @@
 """Config manager for PromptForge."""
 
+import logging
 import os
 import sys
 import tomllib
@@ -11,9 +12,45 @@ from promptforge.config.models import AppConfig
 
 CONFIG_PATH = Path.home() / ".config" / "promptforge" / "config.toml"
 
+_KEYRING_SERVICE = "promptforge"
+_KEYRING_USERNAME = "api_key"
+_KEYRING_PLACEHOLDER = "__keyring__"
+
+logger = logging.getLogger(__name__)
+
 
 class ConfigError(Exception):
     pass
+
+
+def _keyring_set(api_key: str) -> bool:
+    """Store api_key in the OS keychain. Returns True on success."""
+    try:
+        import keyring
+        keyring.set_password(_KEYRING_SERVICE, _KEYRING_USERNAME, api_key)
+        return True
+    except Exception as e:
+        logger.warning("keyring unavailable, key stored in plain text: %s", e)
+        return False
+
+
+def _keyring_get() -> str | None:
+    """Retrieve api_key from the OS keychain. Returns None if not found."""
+    try:
+        import keyring
+        return keyring.get_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
+    except Exception as e:
+        logger.warning("keyring read failed: %s", e)
+        return None
+
+
+def _keyring_delete() -> None:
+    """Remove api_key from the OS keychain."""
+    try:
+        import keyring
+        keyring.delete_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
+    except Exception:
+        pass
 
 
 class ConfigManager:
@@ -31,10 +68,24 @@ class ConfigManager:
 
         try:
             llm = data["llm"]
+            raw_key: str = llm["api_key"]
+
+            # If key was stored in the OS keychain, retrieve it from there
+            if raw_key == _KEYRING_PLACEHOLDER:
+                keychain_key = _keyring_get()
+                if not keychain_key:
+                    raise ConfigError(
+                        "API key not found in system keychain. "
+                        "Run `promptforge configure` to re-enter it."
+                    )
+                api_key = keychain_key
+            else:
+                api_key = raw_key
+
             return AppConfig(
                 provider=llm["provider"],
                 model=llm["model"],
-                api_key=llm["api_key"],
+                api_key=api_key,
                 litellm_model_string=llm["litellm_model_string"],
                 litellm_base_url=llm.get("litellm_base_url"),
             )
@@ -43,10 +94,15 @@ class ConfigManager:
 
     def save(self, config: AppConfig) -> None:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Try to store the API key securely in the OS keychain
+        stored_in_keyring = _keyring_set(config.api_key)
+        stored_key = _KEYRING_PLACEHOLDER if stored_in_keyring else config.api_key
+
         llm_section: dict[str, str] = {
             "provider": config.provider,
             "model": config.model,
-            "api_key": config.api_key,
+            "api_key": stored_key,
             "litellm_model_string": config.litellm_model_string,
         }
         if config.litellm_base_url is not None:
@@ -66,6 +122,12 @@ class ConfigManager:
         if sys.platform != "win32":
             os.chmod(self.config_path, 0o600)
 
+    def delete(self) -> None:
+        """Remove config file and keychain entry."""
+        _keyring_delete()
+        if self.config_path.exists():
+            self.config_path.unlink()
+
     def validate_key(self, config: AppConfig) -> bool:
         import litellm
 
@@ -83,13 +145,6 @@ class ConfigManager:
             litellm.completion(**kwargs)
             return True
         except Exception as e:
-            # Treat any auth / missing-key / bad-key error as invalid.
-            # LiteLLM raises different exception types per provider:
-            #   AuthenticationError  — OpenAI, Anthropic, Mistral, Groq
-            #   APIConnectionError   — Gemini (wraps ValueError for missing key)
-            #   BadRequestError      — some providers on bad model/key combos
-            # A network timeout is a different kind of failure — re-raise it
-            # so the wizard can show a more specific message.
             err = str(e).lower()
             is_auth_failure = any(kw in err for kw in (
                 "auth", "api key", "api_key", "invalid key",
@@ -97,4 +152,4 @@ class ConfigManager:
             ))
             if is_auth_failure:
                 return False
-            raise  # re-raise network / unexpected errors
+            raise

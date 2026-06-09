@@ -74,7 +74,8 @@ def test_save_writes_correct_toml(tmp_path):
     with open(config_path, "rb") as f:
         data = tomllib.load(f)
     assert data["llm"]["provider"] == config.provider
-    assert data["llm"]["api_key"] == config.api_key
+    # API key is stored in OS keychain; config file holds the placeholder or the raw key
+    assert data["llm"]["api_key"] in ("__keyring__", config.api_key)
     assert data["llm"]["litellm_model_string"] == config.litellm_model_string
     assert "litellm_base_url" not in data["llm"]
 
