@@ -14,7 +14,9 @@ PromptForge analyses a vague prompt, asks you targeted clarifying questions, and
 - [Quick Start](#quick-start)
 - [Step 1 — Configure](#step-1--configure)
 - [Step 2 — Run](#step-2--run)
+- [Interactive REPL](#interactive-repl)
 - [All Commands](#all-commands)
+- [Repo Intelligence (graphify)](#repo-intelligence-graphify)
 - [Supported Providers](#supported-providers)
 - [How to Get API Keys](#how-to-get-api-keys)
 - [Configuration File](#configuration-file)
@@ -74,7 +76,13 @@ pipx install promptforge
 ```bash
 git clone https://github.com/your-org/promptforge
 cd promptforge
-pip3 install -e .
+
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate   # macOS / Linux
+
+# Install from pyproject.toml
+pip install -e .
 ```
 
 ### Verify the installation
@@ -209,6 +217,43 @@ The optimised prompt is automatically copied to your clipboard. Paste it directl
 
 ---
 
+## Interactive REPL
+
+Run `promptforge` with no arguments to launch the interactive session. PromptForge loads once and stays open — no cold-start delay between prompts.
+
+```bash
+promptforge
+```
+
+```
+⚡ promptforge > fix my authentication flow
+⚡ promptforge > /diff summarise this article
+⚡ promptforge > /quick write a SQL query for user retention
+⚡ promptforge > /stats
+⚡ promptforge > /exit
+```
+
+You can also just type a prompt directly (no slash needed) — it runs as `/run` by default.
+
+### REPL slash commands
+
+| Command | Description |
+|---|---|
+| `/run <prompt>` | Optimise a prompt (asks clarifying questions) |
+| `/quick <prompt>` | Optimise without questions |
+| `/batch <prompt>` | Show all questions at once, answer in one pass |
+| `/diff <prompt>` | Optimise with before/after token comparison |
+| `/load <file>` | Load a prompt from a file and optimise it |
+| `/configure` | Set up provider and API key |
+| `/stats` | Show token savings analytics |
+| `/stats reset` | Clear session history |
+| `/history` | Show your last 10 sessions |
+| `/clear` | Clear the terminal |
+| `/help` | Show the full command list |
+| `/exit` | Quit PromptForge |
+
+---
+
 ## All Commands
 
 ### `promptforge configure`
@@ -317,6 +362,50 @@ promptforge stats --export sessions.json
 promptforge version
 # promptforge 1.0.0
 ```
+
+---
+
+## Repo Intelligence (graphify)
+
+PromptForge integrates with [graphify](https://pypi.org/project/graphifyy/) to build a knowledge graph of your codebase and use it as context when synthesising prompts.
+
+### Install the optional dependency
+
+```bash
+pip install "promptforge[repo]"
+# or inside your venv:
+pip install graphifyy
+```
+
+### Usage (inside the REPL)
+
+```bash
+# Index a local repo (builds a knowledge graph — takes a few minutes for large repos)
+/repo add ~/projects/my-api
+
+# Ask a question — retrieves graph context then synthesises an optimised prompt
+/repo ask my-api how does the authentication middleware work?
+
+# Same but skip clarifying questions
+/repo quick my-api explain the database connection pooling
+
+# Raw graph query only (no prompt synthesis)
+/repo query my-api what are the main entry points?
+
+# Open the interactive graph visualisation in your browser
+/repo graph my-api
+
+# List all indexed repos
+/repo list
+
+# Re-index after code changes
+/repo refresh my-api
+
+# Remove a repo from the index
+/repo remove my-api
+```
+
+If graphify is not installed, PromptForge will prompt you to install it when you use a `/repo` command.
 
 ---
 
@@ -483,6 +572,12 @@ promptforge run "your prompt" > optimised.txt
 ```bash
 git clone https://github.com/your-org/promptforge
 cd promptforge
+
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate   # macOS / Linux
+
+# Install with dev dependencies
 pip3 install -e ".[dev]"
 
 # Run tests
