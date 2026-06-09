@@ -1,0 +1,37 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+
+# Build & dist
+dist/
+build/
+
+# Coverage
+.coverage
+coverage
+htmlcov/
+.pytest_cache/
+
+# Type checking
+.mypy_cache/
+
+# OS
+.DS_Store
+DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Project tooling
+.multiagent/
