@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "promptforge"
+name = "promptforge-ai"
 version = "1.0.0"
 description = "Turn vague prompts into structured, token-efficient prompts from your terminal."
 readme = "README.md"
