@@ -86,6 +86,7 @@ class Synthesizer:
             "messages": messages,
             "max_tokens": 800,
             "api_key": config.api_key,
+            "num_retries": 0,  # no automatic retries — rapid retries blow through free-tier quotas
         }
         if config.litellm_base_url:
             kwargs["base_url"] = config.litellm_base_url

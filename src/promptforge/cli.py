@@ -174,32 +174,38 @@ def _run_pipeline(
     from promptforge.synthesizer.engine import Synthesizer
     try:
         optimized = Synthesizer().synthesize(context, config)
-    except litellm.AuthenticationError:  # type: ignore[attr-defined]
+    except litellm.AuthenticationError as e:  # type: ignore[attr-defined]
         _console.print(f"✗ API key was rejected by {config.provider}.")
+        _console.print(f"  Detail: {e}")
         _console.print("  Hint: Run `promptforge configure` to update your key.")
         raise typer.Exit(2)
-    except litellm.RateLimitError:  # type: ignore[attr-defined]
-        _console.print(f"✗ {config.provider} rate limit reached.")
-        _console.print("  Hint: Wait a few minutes or check your provider's usage dashboard.")
+    except litellm.RateLimitError as e:  # type: ignore[attr-defined]
+        _console.print(f"✗ {config.provider} rate limit reached (429).")
+        _console.print(f"  Detail: {e}")
+        _console.print("  Hint: Free-tier accounts have strict per-minute limits.")
+        _console.print("        Wait 60 seconds and try again, or upgrade to a paid plan.")
         raise typer.Exit(2)
-    except (litellm.Timeout, litellm.APIConnectionError):  # type: ignore[attr-defined]
+    except (litellm.Timeout, litellm.APIConnectionError) as e:  # type: ignore[attr-defined]
         _console.print(f"✗ Could not reach {config.provider}.")
+        _console.print(f"  Detail: {e}")
         _console.print("  Hint: Check your network connection and try again.")
         raise typer.Exit(2)
     except litellm.BadRequestError as e:  # type: ignore[attr-defined]
-        _console.print(f"✗ {config.provider} rejected the request: {e}")
-        _console.print("  Hint: This usually means a bad model name in config — run `promptforge configure` again.")
+        _console.print(f"✗ {config.provider} rejected the request.")
+        _console.print(f"  Detail: {e}")
+        _console.print("  Hint: The model name may be wrong — run `promptforge configure` again.")
         raise typer.Exit(2)
-    except litellm.ServiceUnavailableError:  # type: ignore[attr-defined]
-        _console.print(f"✗ {config.provider} is temporarily unavailable.")
-        _console.print("  Hint: Try again in a few minutes.")
+    except litellm.ServiceUnavailableError as e:  # type: ignore[attr-defined]
+        _console.print(f"✗ {config.provider} returned an error.")
+        _console.print(f"  Detail: {e}")
+        _console.print("  Hint: The model may need billing enabled, or try a different model.")
         raise typer.Exit(2)
     except Exception as e:
         if debug:
             import traceback
             traceback.print_exc(file=sys.stderr)
-        _console.print(f"✗ Unexpected error: {e}")
-        _console.print("  Hint: Run with --debug for full traceback.")
+        _console.print(f"✗ LLM call failed: {e}")
+        _console.print("  Hint: Run with --debug for the full traceback.")
         raise typer.Exit(99)
 
     # Usage logging
