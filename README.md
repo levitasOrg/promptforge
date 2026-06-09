@@ -322,16 +322,18 @@ promptforge version
 
 ## Supported Providers
 
-| # | Provider | Recommended model | Other models | Key type |
+| # | Provider | Recommended model ★ | Other available models | Key type |
 |---|---|---|---|---|
-| 1 | **OpenAI** | GPT-4o Mini ★ | GPT-4o, GPT-4 Turbo | OpenAI API Key |
-| 2 | **Anthropic** | Claude Haiku 3.5 ★ | Claude Sonnet 4.5, Claude Opus 4.5 | Anthropic API Key |
-| 3 | **Google Gemini** | Gemini 1.5 Flash ★ | Gemini 1.5 Pro | Google AI API Key |
-| 4 | **Mistral** | Mistral Small ★ | Mistral Medium, Mistral Large | Mistral API Key |
-| 5 | **Groq** | LLaMA 3.1 8B Instant ★ | LLaMA 3.1 70B, Mixtral 8x7B | Groq API Key |
-| 6 | **GitHub Copilot** | GPT-4o ★ | GPT-4o Mini | GitHub PAT (copilot scope) |
+| 1 | **OpenAI** | GPT-4.1 Mini | GPT-4.1, GPT-4o, GPT-4o Mini, o4-mini | OpenAI API Key |
+| 2 | **Anthropic** | Claude Haiku 4.5 | Claude Sonnet 4.6, Claude Opus 4.7 | Anthropic API Key |
+| 3 | **Google Gemini** | Gemini 2.5 Flash | Gemini 2.5 Pro, Gemini 2.0 Flash, Gemini 1.5 Flash | Google AI API Key |
+| 4 | **Mistral** | Mistral Small | Mistral Large, Codestral, Mistral Nemo | Mistral API Key |
+| 5 | **Groq** | LLaMA 3.3 70B | LLaMA 3.1 8B Instant, Gemma 2 9B, Mixtral 8x7B | Groq API Key |
+| 6 | **GitHub Copilot** | GPT-4.1 | GPT-4o, GPT-4o Mini | GitHub PAT (copilot scope) |
 
-★ = recommended — fastest and cheapest for each provider.
+★ = recommended — best balance of speed and quality for prompt optimisation.
+
+> **Models are current as of June 2025.** Run `promptforge configure` to see the full live list shown during setup.
 
 ---
 

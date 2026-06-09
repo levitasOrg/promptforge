@@ -77,14 +77,14 @@ def test_save_called_with_correct_provider_and_model():
         patch("promptforge.config.manager.ConfigManager.validate_key", return_value=True),
         patch("promptforge.config.manager.ConfigManager.save", fake_save),
     ):
-        # provider 1 = OpenAI, model 2 = gpt-4o
+        # provider 1 = OpenAI, model 2 = gpt-4.1 (second in list)
         result = _invoke(["1", "2", "sk-test"])
 
     assert result.exit_code == 0, result.output
     assert len(captured) == 1
     saved = captured[0]
     assert saved.provider == "openai"
-    assert saved.model == "gpt-4o"
+    assert saved.model == "gpt-4.1"
     assert saved.api_key == "sk-test"
-    assert saved.litellm_model_string == "openai/gpt-4o"
+    assert saved.litellm_model_string == "openai/gpt-4.1"
     assert saved.litellm_base_url is None
