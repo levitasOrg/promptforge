@@ -81,5 +81,19 @@ class ConfigManager:
         try:
             litellm.completion(**kwargs)
             return True
-        except litellm.AuthenticationError:  # type: ignore[attr-defined]
-            return False
+        except Exception as e:
+            # Treat any auth / missing-key / bad-key error as invalid.
+            # LiteLLM raises different exception types per provider:
+            #   AuthenticationError  — OpenAI, Anthropic, Mistral, Groq
+            #   APIConnectionError   — Gemini (wraps ValueError for missing key)
+            #   BadRequestError      — some providers on bad model/key combos
+            # A network timeout is a different kind of failure — re-raise it
+            # so the wizard can show a more specific message.
+            err = str(e).lower()
+            is_auth_failure = any(kw in err for kw in (
+                "auth", "api key", "api_key", "invalid key",
+                "missing", "unauthorized", "permission", "credential",
+            ))
+            if is_auth_failure:
+                return False
+            raise  # re-raise network / unexpected errors
