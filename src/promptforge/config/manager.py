@@ -73,6 +73,7 @@ class ConfigManager:
             "model": config.litellm_model_string,
             "messages": [{"role": "user", "content": "ping"}],
             "max_tokens": 1,
+            "api_key": config.api_key,
         }
         if config.litellm_base_url is not None:
             kwargs["base_url"] = config.litellm_base_url

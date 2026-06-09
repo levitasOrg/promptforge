@@ -85,6 +85,7 @@ class Synthesizer:
             "model": config.litellm_model_string,
             "messages": messages,
             "max_tokens": 800,
+            "api_key": config.api_key,
         }
         if config.litellm_base_url:
             kwargs["base_url"] = config.litellm_base_url
