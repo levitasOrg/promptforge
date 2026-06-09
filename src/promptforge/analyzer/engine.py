@@ -1,9 +1,16 @@
 import logging
 import re
-from promptforge.analyzer.models import AnalysisReport, Issue, IssueSeverity
+
 from promptforge.analyzer.detectors import (
-    missing_context, audience, output_format, scope, input_schema, action_verb, examples
+    action_verb,
+    audience,
+    examples,
+    input_schema,
+    missing_context,
+    output_format,
+    scope,
 )
+from promptforge.analyzer.models import AnalysisReport, Issue, IssueSeverity
 
 logger = logging.getLogger(__name__)
 

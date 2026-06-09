@@ -1,15 +1,14 @@
-import sys
-import logging
 import difflib
+import logging
+import sys
 from pathlib import Path
 
 import pyperclip
 from rich.console import Console
 from rich.panel import Panel
-from rich.syntax import Syntax
 
-from promptforge.synthesizer.models import OptimizedPrompt
 from promptforge.stats.logger import UsageLogger
+from promptforge.synthesizer.models import OptimizedPrompt
 
 logger = logging.getLogger(__name__)
 _stderr_console = Console(stderr=True)
@@ -70,10 +69,7 @@ class Renderer:
 
         orig_tokens = int(len(original.split()) * 1.33)
         opt_tokens = int(len(optimized.split()) * 1.33)
-        if orig_tokens > 0:
-            pct = int((orig_tokens - opt_tokens) / orig_tokens * 100)
-        else:
-            pct = 0
+        pct = int((orig_tokens - opt_tokens) / orig_tokens * 100) if orig_tokens > 0 else 0
 
         _stderr_console.print(f"\n[dim]Original: ~{orig_tokens} tokens → Optimized: ~{opt_tokens} tokens ({pct}% reduction)[/dim]")
         for line in diff:

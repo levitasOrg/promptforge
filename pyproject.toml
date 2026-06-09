@@ -52,17 +52,23 @@ packages = ["src/promptforge"]
 "src/promptforge/synthesizer/system_prompt.txt" = "promptforge/synthesizer/system_prompt.txt"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B904", "E501"]  # B904: raise-without-from acceptable in CLI handlers; E501: line length enforced by formatter
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["litellm", "litellm.*", "pyperclip", "readchar", "tomli_w"]
+ignore_missing_imports = true
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

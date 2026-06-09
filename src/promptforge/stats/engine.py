@@ -1,10 +1,11 @@
 from math import ceil
 from statistics import mean
+
 from promptforge.stats.models import UsageRecord
 
 
 class StatsEngine:
-    def compute_summary(self, records: list[UsageRecord]) -> dict:
+    def compute_summary(self, records: list[UsageRecord]) -> dict[str, object]:
         if not records:
             return {
                 "total_sessions": 0,
@@ -39,7 +40,7 @@ class StatsEngine:
             "negative_ratings": negative,
         }
 
-    def compute_savings(self, records: list[UsageRecord], reuse_n: int) -> dict:
+    def compute_savings(self, records: list[UsageRecord], reuse_n: int) -> dict[str, object]:
         gross = sum(
             (r.original_token_estimate - r.optimized_token_estimate) * reuse_n
             for r in records

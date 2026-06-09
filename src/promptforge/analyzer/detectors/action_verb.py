@@ -17,8 +17,7 @@ def detect(raw_prompt: str) -> list[Issue]:
     first_verb = first_verb.strip(".,!?;:")
     # Check multi-word weak verbs first
     for weak in WEAK_VERBS:
-        if " " in weak:
-            if lower.startswith(weak) or lower.startswith("please " + weak):
+        if " " in weak and (lower.startswith(weak) or lower.startswith("please " + weak)):
                 return [Issue(detector_id="action_verb", severity=IssueSeverity.MEDIUM,
                              description=f"Weak action verb '{weak}' found.",
                              fragment=weak)]

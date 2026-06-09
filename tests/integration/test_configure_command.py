@@ -1,8 +1,7 @@
 """Integration tests for the `configure` command."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 
 from promptforge.cli import app

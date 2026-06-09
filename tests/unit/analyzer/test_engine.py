@@ -1,8 +1,8 @@
 import logging
 from unittest.mock import patch
-import pytest
+
 from promptforge.analyzer.engine import Analyzer
-from promptforge.analyzer.models import Issue, IssueSeverity
+
 
 def make_vague_prompt():
     return "fix it"  # fires missing_context, action_verb, output_format, input_schema (maybe)
@@ -36,9 +36,8 @@ def test_issue_count_by_severity_populated():
 def test_broken_detector_does_not_crash_pipeline(caplog):
     analyzer = Analyzer()
     # Patch one detector to raise
-    with patch("promptforge.analyzer.detectors.audience.detect", side_effect=RuntimeError("boom")):
-        with caplog.at_level(logging.WARNING):
-            report = analyzer.analyze("Write a detailed guide to Python programming best practices for web developers.")
+    with patch("promptforge.analyzer.detectors.audience.detect", side_effect=RuntimeError("boom")), caplog.at_level(logging.WARNING):
+        report = analyzer.analyze("Write a detailed guide to Python programming best practices for web developers.")
     assert report is not None
     assert any("audience" in r.message for r in caplog.records)
 

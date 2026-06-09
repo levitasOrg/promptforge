@@ -1,6 +1,7 @@
-from promptforge.assembler.context import ContextAssembler
 from promptforge.analyzer.models import AnalysisReport
+from promptforge.assembler.context import ContextAssembler
 from promptforge.questions.models import UserAnswer
+
 
 def make_report():
     return AnalysisReport(

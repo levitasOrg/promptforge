@@ -1,8 +1,8 @@
 import json
-import pytest
-from pathlib import Path
+
 from promptforge.stats.logger import UsageLogger
-from promptforge.stats.models import UsageRecord, RatingRecord
+from promptforge.stats.models import UsageRecord
+
 
 def make_usage_record(session_id="sess-1", **kwargs):
     defaults = dict(

@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from promptforge.stats.models import RatingRecord, UsageRecord
@@ -23,7 +23,7 @@ class UsageLogger:
             f.write(line + "\n")
 
     def record_rating(self, session_id: str, rating: int) -> None:
-        rated_at = datetime.now(tz=timezone.utc).isoformat()
+        rated_at = datetime.now(tz=UTC).isoformat()
         rec = RatingRecord(session_id=session_id, rating=rating, rated_at=rated_at)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps(asdict(rec), default=str)

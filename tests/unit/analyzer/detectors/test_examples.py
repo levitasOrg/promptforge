@@ -1,5 +1,5 @@
 from promptforge.analyzer.detectors.examples import detect
-from promptforge.analyzer.models import AnalysisReport, Issue, IssueSeverity
+from promptforge.analyzer.models import AnalysisReport, IssueSeverity
 
 
 def make_report(has_output_format_issue: bool) -> AnalysisReport:

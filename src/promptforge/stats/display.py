@@ -1,8 +1,9 @@
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from promptforge.stats.models import UsageRecord
+
 from promptforge.stats.engine import StatsEngine
+from promptforge.stats.models import UsageRecord
 
 _console = Console(stderr=True)
 
@@ -18,11 +19,11 @@ class StatsRenderer:
             f"  Total original tokens:   {summary['total_original_tokens']:,}",
             f"  Total optimised tokens:  {summary['total_optimized_tokens']:,}",
             f"  Total tool cost:         {summary['total_tool_cost']:,}",
-            f"",
+            "",
             f"  Average prompt reduction:    {summary['avg_reduction_pct']:.0f}%",
             f"  Net saving at {reuse_n}× reuse:  {savings['net_saving']:+,} tokens",
-            f"",
-            f"  ── Feedback ────────────────────────────────────────────",
+            "",
+            "  ── Feedback ────────────────────────────────────────────",
             f"  Sessions rated:  {summary['sessions_rated']} of {summary['total_sessions']}",
             f"  \U0001f44d Positive:     {summary['positive_ratings']}",
             f"  \U0001f44e Negative:     {summary['negative_ratings']}",

@@ -1,6 +1,6 @@
-import sys
 import datetime
 import logging
+import sys
 from pathlib import Path
 
 import typer
@@ -52,7 +52,7 @@ def _run_pipeline(
     _console = Console(stderr=True)
 
     # Load config
-    from promptforge.config.manager import ConfigManager, ConfigError
+    from promptforge.config.manager import ConfigError, ConfigManager
     try:
         config = ConfigManager().load()
     except ConfigError:
@@ -67,8 +67,8 @@ def _run_pipeline(
     questions = []
     answers = []
     if not no_questions:
-        from promptforge.questions.engine import QuestionEngine
         from promptforge.interviewer.terminal import Interviewer
+        from promptforge.questions.engine import QuestionEngine
         questions = QuestionEngine().generate(report)
         answers = Interviewer().conduct(questions, batch=batch)
 
@@ -80,23 +80,23 @@ def _run_pipeline(
     from promptforge.synthesizer.engine import Synthesizer
     try:
         optimized = Synthesizer().synthesize(context, config)
-    except litellm.AuthenticationError:
+    except litellm.AuthenticationError:  # type: ignore[attr-defined]
         _console.print(f"✗ API key was rejected by {config.provider}.")
         _console.print("  Hint: Run `promptforge configure` to update your key.")
         raise typer.Exit(2)
-    except litellm.RateLimitError:
+    except litellm.RateLimitError:  # type: ignore[attr-defined]
         _console.print(f"✗ {config.provider} rate limit reached.")
         _console.print("  Hint: Wait a few minutes or check your provider's usage dashboard.")
         raise typer.Exit(2)
-    except (litellm.Timeout, litellm.APIConnectionError):
+    except (litellm.Timeout, litellm.APIConnectionError):  # type: ignore[attr-defined]
         _console.print(f"✗ Could not reach {config.provider}.")
         _console.print("  Hint: Check your network connection and try again.")
         raise typer.Exit(2)
-    except litellm.BadRequestError as e:
+    except litellm.BadRequestError as e:  # type: ignore[attr-defined]
         _console.print(f"✗ {config.provider} rejected the request: {e}")
         _console.print("  Hint: This usually means a bad model name in config — run `promptforge configure` again.")
         raise typer.Exit(2)
-    except litellm.ServiceUnavailableError:
+    except litellm.ServiceUnavailableError:  # type: ignore[attr-defined]
         _console.print(f"✗ {config.provider} is temporarily unavailable.")
         _console.print("  Hint: Try again in a few minutes.")
         raise typer.Exit(2)
@@ -104,9 +104,9 @@ def _run_pipeline(
         if debug:
             import traceback
             traceback.print_exc(file=sys.stderr)
-        _console.print(f"✗ LLM call failed: {e}")
+        _console.print(f"✗ Unexpected error: {e}")
         _console.print("  Hint: Run with --debug for full traceback.")
-        raise typer.Exit(2)
+        raise typer.Exit(99)
 
     # Usage logging
     from promptforge.stats.logger import UsageLogger
@@ -116,7 +116,7 @@ def _run_pipeline(
         orig_tokens = int(len(raw_prompt.split()) * 1.33)
         record = UsageRecord(
             session_id=optimized.session_id,
-            timestamp=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            timestamp=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             command="run",
             mode="standard",
             original_token_estimate=orig_tokens,
@@ -157,7 +157,7 @@ def _run_pipeline(
 def configure() -> None:
     """First-run setup wizard. Select provider, model, enter API key."""
     from promptforge.config.manager import ConfigManager
-    from promptforge.config.providers import ProviderRegistry, COPILOT_BASE_URL
+    from promptforge.config.providers import COPILOT_BASE_URL, ProviderRegistry
 
     console = Console(stderr=True)
     registry = ProviderRegistry()
@@ -336,8 +336,9 @@ def stats(
 ) -> None:
     """Show token savings analytics from your session history."""
     from pathlib import Path
-    from promptforge.stats.logger import UsageLogger
+
     from promptforge.stats.display import StatsRenderer
+    from promptforge.stats.logger import UsageLogger
 
     usage_logger = UsageLogger()
     renderer = StatsRenderer()

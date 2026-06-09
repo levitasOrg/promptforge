@@ -101,7 +101,7 @@ def test_save_sets_chmod_600(tmp_path):
 
 
 def test_validate_key_returns_true_on_success(tmp_path):
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     config = make_app_config()
     manager = ConfigManager(config_path=tmp_path / "config.toml")
@@ -114,8 +114,9 @@ def test_validate_key_returns_true_on_success(tmp_path):
 
 
 def test_validate_key_returns_false_on_auth_error(tmp_path):
-    import litellm
     from unittest.mock import patch
+
+    import litellm
 
     config = make_app_config()
     manager = ConfigManager(config_path=tmp_path / "config.toml")

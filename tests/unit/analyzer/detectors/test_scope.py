@@ -1,5 +1,4 @@
 from promptforge.analyzer.detectors.scope import detect
-from promptforge.analyzer.models import IssueSeverity
 
 
 def test_fires_on_everything_without_qualifier():

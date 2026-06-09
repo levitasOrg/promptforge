@@ -1,6 +1,4 @@
-import pytest
 from promptforge.questions.templates import TEMPLATES
-
 
 EXPECTED_KEYS = {
     "output_format",

@@ -31,7 +31,6 @@ class ConfigManager:
 
         try:
             llm = data["llm"]
-            prefs = data.get("preferences", {})
             return AppConfig(
                 provider=llm["provider"],
                 model=llm["model"],
@@ -44,7 +43,7 @@ class ConfigManager:
 
     def save(self, config: AppConfig) -> None:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        llm_section: dict = {
+        llm_section: dict[str, str] = {
             "provider": config.provider,
             "model": config.model,
             "api_key": config.api_key,
@@ -70,7 +69,7 @@ class ConfigManager:
     def validate_key(self, config: AppConfig) -> bool:
         import litellm
 
-        kwargs: dict = {
+        kwargs: dict[str, object] = {
             "model": config.litellm_model_string,
             "messages": [{"role": "user", "content": "ping"}],
             "max_tokens": 1,
@@ -81,5 +80,5 @@ class ConfigManager:
         try:
             litellm.completion(**kwargs)
             return True
-        except litellm.AuthenticationError:
+        except litellm.AuthenticationError:  # type: ignore[attr-defined]
             return False

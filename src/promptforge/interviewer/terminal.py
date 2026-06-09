@@ -1,5 +1,5 @@
-import sys
 from rich.console import Console
+
 from promptforge.questions.models import ClarifyingQuestion, UserAnswer
 
 _console = Console(stderr=True)

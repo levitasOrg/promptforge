@@ -1,5 +1,7 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 from typer.testing import CliRunner
+
 from promptforge.cli import app
 from promptforge.stats.models import UsageRecord
 

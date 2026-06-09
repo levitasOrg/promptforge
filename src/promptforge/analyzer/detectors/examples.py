@@ -1,4 +1,4 @@
-from promptforge.analyzer.models import Issue, IssueSeverity, AnalysisReport
+from promptforge.analyzer.models import AnalysisReport, Issue, IssueSeverity
 
 EXAMPLE_MARKERS = ["example:", "e.g.", "for instance", "such as", "like this:", "input:"]
 

@@ -25,7 +25,7 @@ class MetaPromptBuilder:
             .read_text(encoding="utf-8")
         )
 
-    def build(self, context: PromptContext) -> list[dict]:
+    def build(self, context: PromptContext) -> list[dict[str, str]]:
         system_text = self._load_system_prompt()
 
         lines: list[str] = [f"Original prompt: {context.raw_prompt}"]
@@ -57,12 +57,12 @@ class MetaPromptBuilder:
         if estimated > _MAX_TOKEN_ESTIMATE:
             # First truncate additional_context
             if context.additional_context:
-                lines = [l for l in lines if not l.startswith("Additional context:")]
+                lines = [ln for ln in lines if not ln.startswith("Additional context:")]
                 user_text = "\n".join(lines)
             # Then truncate scope_constraints
             estimated = _estimate_tokens(system_text) + _estimate_tokens(user_text)
             if estimated > _MAX_TOKEN_ESTIMATE and context.scope_constraints:
-                lines = [l for l in lines if not l.startswith("Constraints:")]
+                lines = [ln for ln in lines if not ln.startswith("Constraints:")]
                 user_text = "\n".join(lines)
 
         return [
@@ -81,7 +81,7 @@ class Synthesizer:
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug("Meta-prompt:\n%s", messages[1]["content"])
 
-        kwargs: dict = {
+        kwargs: dict[str, object] = {
             "model": config.litellm_model_string,
             "messages": messages,
             "max_tokens": 800,
