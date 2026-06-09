@@ -58,7 +58,10 @@ _HELP_TEXT = """\
 def _repl() -> None:
     """Interactive REPL — stays open until /exit or Ctrl+D."""
     import os
-    import readline  # enables arrow-key history in the prompt on macOS/Linux  # noqa: F401
+    try:
+        import readline  # enables arrow-key history in the prompt on macOS/Linux  # noqa: F401
+    except ImportError:
+        pass  # readline not available on Windows — arrow-key history silently skipped
 
     console = Console(stderr=True)
     console.print(
