@@ -45,14 +45,21 @@ def _show_welcome() -> None:
     console.print(header)
     console.print(Rule(f"[bold]PromptForge[/bold] [dim]v{__version__}[/dim]", style="cyan"))
 
-    # ── Left column: welcome + icon + metadata ───────────────────────────────
+    # ── Left column: branding ────────────────────────────────────────────────
     left = Text(justify="center")
-    left.append("\nWelcome to\nPromptForge!\n\n", style="bold white")
-    left.append("   ▄███▄\n", style="bold yellow")
-    left.append("  ██⚡██\n", style="bold yellow")
-    left.append(" ████████\n", style="bold yellow")
-    left.append("    █ █\n\n", style="bold yellow")
-    left.append(f"v{__version__}\n", style="dim")
+    left.append("\nWelcome to\n\n", style="white")
+    left.append("⚡PromptForge!\n", style="bold cyan")
+    left.append("\n")
+    left.append(
+        "▀█████████▀\n"
+        " ▀███████▀\n"
+        "  ▀█████▀\n"
+        "   ▀███▀\n"
+        "    ▀█▀\n"
+        "     ▀\n",
+        style="cyan",
+    )
+    left.append(f"\nv{__version__}\n", style="dim")
     left.append(f"~/{cwd}\n", style="dim")
 
     # ── Right column: tips + what is ────────────────────────────────────────
