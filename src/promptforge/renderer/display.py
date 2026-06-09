@@ -96,4 +96,4 @@ class Renderer:
                 _stderr_console.print("✓ Feedback recorded.")
             # s or anything else: silent skip
         except Exception as e:
-            logger.warning("Rating collection failed (non-TTY?): %s. Skipping.", e)
+            logger.warning("Rating collection failed: %s. Skipping.", e)

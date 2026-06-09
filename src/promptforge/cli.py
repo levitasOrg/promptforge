@@ -12,10 +12,82 @@ from promptforge.config.models import AppConfig
 app = typer.Typer(
     name="promptforge",
     help="Turn vague prompts into structured, token-efficient prompts.",
-    no_args_is_help=True,
+    invoke_without_command=True,
+    no_args_is_help=False,
 )
 repo_app = typer.Typer(help="Index and query git repositories.", no_args_is_help=True)
 app.add_typer(repo_app, name="repo")
+
+
+@app.callback()
+def _main(ctx: typer.Context) -> None:
+    """Show welcome banner when called with no subcommand."""
+    if ctx.invoked_subcommand is None:
+        _show_welcome()
+        raise typer.Exit(0)
+
+
+def _show_welcome() -> None:
+    import os
+
+    from rich.padding import Padding
+    from rich.panel import Panel
+    from rich.rule import Rule
+    from rich.table import Table
+    from rich.text import Text
+
+    console = Console(stderr=True)
+    cwd = os.path.basename(os.getcwd()) or os.getcwd()
+
+    # ── Header line (above the box, like "claude claude  Claude Code v2.x") ──
+    header = Text()
+    header.append("[+ promptforge promptforge]", style="bold cyan")
+    console.print(header)
+    console.print(Rule(f"[bold]PromptForge[/bold] [dim]v{__version__}[/dim]", style="cyan"))
+
+    # ── Left column: welcome + icon + metadata ───────────────────────────────
+    left = Text(justify="center")
+    left.append("\nWelcome to\nPromptForge!\n\n", style="bold white")
+    left.append("   ▄███▄\n", style="bold yellow")
+    left.append("  ██⚡██\n", style="bold yellow")
+    left.append(" ████████\n", style="bold yellow")
+    left.append("    █ █\n\n", style="bold yellow")
+    left.append(f"v{__version__}\n", style="dim")
+    left.append(f"~/{cwd}\n", style="dim")
+
+    # ── Right column: tips + what is ────────────────────────────────────────
+    right = Text()
+    right.append("\nTips for getting started\n", style="bold yellow")
+    right.append("Configure your provider, then run on any vague prompt.\n\n", style="")
+    right.append("  promptforge configure\n", style="cyan")
+    right.append("    Pick a provider and validate your API key.\n\n", style="dim")
+    right.append("  promptforge run \"help me fix the code\"\n", style="cyan")
+    right.append("    Analyse → ask → synthesize (one LLM call).\n\n", style="dim")
+    right.append("  promptforge correct my_prompt.txt\n", style="cyan")
+    right.append("    Optimise an existing prompt file.\n\n", style="dim")
+    right.append("  promptforge run \"...\" --diff\n", style="cyan")
+    right.append("    Show before/after token comparison.\n\n", style="dim")
+    right.append("  promptforge stats --reuse 10\n", style="cyan")
+    right.append("    See savings at 10× prompt reuse.\n\n", style="dim")
+
+    right.append("What's new\n", style="bold yellow")
+    right.append("Rule-based vagueness detection across 7 dimensions.\n", style="dim")
+    right.append("Single LLM call per session — no token waste.\n", style="dim")
+    right.append("Auto-copies result to clipboard after every run.\n", style="dim")
+    right.append("Ratings + token savings tracked in usage_log.jsonl.\n", style="dim")
+    right.append("Providers: OpenAI · Anthropic · Gemini · Mistral · Groq · Copilot\n", style="dim")
+
+    # ── Two-column grid ──────────────────────────────────────────────────────
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column(ratio=2, min_width=22)
+    grid.add_column(ratio=5)
+    grid.add_row(
+        Padding(left, (0, 1)),
+        Padding(right, (0, 1)),
+    )
+
+    console.print(Panel(grid, border_style="cyan", padding=(0, 0)))
+    console.print()
 
 _MAX_FILE_SIZE = 50 * 1024  # 50KB
 
