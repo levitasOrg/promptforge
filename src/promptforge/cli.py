@@ -290,8 +290,14 @@ def configure() -> None:
             pass
         console.print("[red]Invalid choice.[/red]")
 
-    # Step 3: API key input (hidden)
-    key = typer.prompt(selected_provider.auth_label, hide_input=True, err=True)
+    # Step 3: API key input — use getpass so paste works in all terminals
+    import getpass
+    console.print(f"\n{selected_provider.auth_label}: ", end="")
+    try:
+        key = getpass.getpass(prompt="")
+    except (EOFError, KeyboardInterrupt):
+        console.print("\n[yellow]Cancelled.[/yellow]")
+        raise typer.Exit(1)
 
     # Determine base_url for Copilot
     base_url = COPILOT_BASE_URL if selected_provider.id == "copilot" else None
@@ -318,7 +324,12 @@ def configure() -> None:
             break
         console.print("[red]✗ Key rejected by provider. Check your key and try again.[/red]")
         if attempt < 3:
-            key = typer.prompt(selected_provider.auth_label, hide_input=True, err=True)
+            console.print(f"{selected_provider.auth_label}: ", end="")
+            try:
+                key = getpass.getpass(prompt="")
+            except (EOFError, KeyboardInterrupt):
+                console.print("\n[yellow]Cancelled.[/yellow]")
+                raise typer.Exit(1)
             config = AppConfig(
                 provider=selected_provider.id,
                 model=selected_model.id,
