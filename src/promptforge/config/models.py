@@ -23,6 +23,7 @@ class AppConfig:
     model: str
     api_key: str
     litellm_model_string: str
+    litellm_base_url: str | None = None  # only set for providers needing a custom endpoint (e.g. Copilot)
 
     @property
     def masked_key(self) -> str:
