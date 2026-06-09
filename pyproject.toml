@@ -31,6 +31,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+repo = [
+    "graphifyy>=0.1",
+]
 dev = [
     "pytest>=8,<9",
     "pytest-mock>=3.12,<4.0",

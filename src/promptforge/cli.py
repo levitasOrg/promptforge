@@ -31,18 +31,28 @@ def _main(ctx: typer.Context) -> None:
 # ── Slash-command REPL ────────────────────────────────────────────────────────
 
 _HELP_TEXT = """\
-/run <prompt>       optimise a prompt (asks clarifying questions)
-/quick <prompt>     optimise a prompt, skip all questions
-/batch <prompt>     optimise a prompt, show all questions at once
-/load <file>        load a prompt from a file and optimise it
-/diff <prompt>      optimise and show before/after token comparison
-/configure          set up provider and API key
-/stats              show token savings analytics
-/stats reset        clear session history
-/history            show your last 10 sessions
-/clear              clear the terminal
-/help               show this list
-/exit               quit PromptForge"""
+/run <prompt>             optimise a prompt (asks clarifying questions)
+/quick <prompt>           optimise without questions
+/batch <prompt>           optimise, show all questions at once
+/diff <prompt>            optimise with before/after token comparison
+/load <file>              load a prompt from a file and optimise it
+
+/repo add <path|url>      index a repo with graphify (builds knowledge graph)
+/repo ask <question>      query graph + synthesize optimised prompt
+/repo quick <question>    query graph + synthesize (no clarifying questions)
+/repo query <question>    raw graphify query only (no prompt synthesis)
+/repo graph               open interactive graph visualization in browser
+/repo list                show all indexed repos
+/repo refresh <name>      re-index a repo after code changes
+/repo remove <name>       remove a repo from the index
+
+/configure                set up provider and API key
+/stats                    show token savings analytics
+/stats reset              clear session history
+/history                  show your last 10 sessions
+/clear                    clear the terminal
+/help                     show this list
+/exit                     quit PromptForge"""
 
 
 def _repl() -> None:
@@ -132,6 +142,9 @@ def _repl() -> None:
 
         elif cmd == "history":
             _repl_history(console)
+
+        elif cmd == "repo":
+            _repl_repo(console, arg)
 
         else:
             console.print(f"[red]Unknown command: /{cmd}[/red]  — type /help for the full list.")
@@ -290,6 +303,201 @@ def _repl_history(console: Console) -> None:
             f"{rating}"
         )
     console.print()
+
+
+def _repl_repo(console: Console, arg: str) -> None:  # noqa: C901
+    """Handle all /repo subcommands."""
+    import datetime
+
+    from promptforge.repo.bridge import INSTALL_HINT, index, is_installed, open_graph, query
+    from promptforge.repo.store import RepoEntry, RepoStore
+
+    parts = arg.split(None, 1)
+    sub = parts[0].lower() if parts else ""
+    rest = parts[1].strip() if len(parts) > 1 else ""
+
+    # ── /repo add <path|url> ──────────────────────────────────────────────
+    if sub == "add":
+        if not rest:
+            console.print("[red]Usage: /repo add <path>[/red]")
+            return
+        if not is_installed():
+            console.print(f"[yellow]{INSTALL_HINT}[/yellow]")
+            return
+
+        repo_path = Path(rest).expanduser().resolve()
+        if not repo_path.exists():
+            console.print(f"[red]Path not found: {rest}[/red]")
+            return
+
+        name = repo_path.name
+        console.print(f"\n[bold]Indexing [cyan]{repo_path}[/cyan] with graphify...[/bold]")
+        console.print("[dim]This may take a few minutes for large repos.[/dim]\n")
+        try:
+            graph_dir = index(repo_path)
+        except RuntimeError as e:
+            console.print(f"[red]✗ Indexing failed: {e}[/red]")
+            return
+
+        entry = RepoEntry(
+            name=name,
+            path=str(repo_path),
+            graph_dir=str(graph_dir),
+            indexed_at=datetime.datetime.now(tz=datetime.UTC).isoformat(),
+        )
+        RepoStore().add(entry)
+        console.print(f"\n[green]✓ Indexed as [bold]{name}[/bold][/green]")
+        console.print(f"  Graph at: [dim]{graph_dir}[/dim]")
+        console.print(f"  Use: [cyan]/repo ask {name} <question>[/cyan]\n")
+
+    # ── /repo ask <question>  or  /repo ask <name> <question> ────────────
+    elif sub in ("ask", "quick"):
+        if not rest:
+            console.print(f"[red]Usage: /repo {sub} <question>[/red]")
+            return
+        if not is_installed():
+            console.print(f"[yellow]{INSTALL_HINT}[/yellow]")
+            return
+        _repo_synthesize(console, rest, no_questions=(sub == "quick"))
+
+    # ── /repo query <question> ────────────────────────────────────────────
+    elif sub == "query":
+        if not rest:
+            console.print("[red]Usage: /repo query <question>[/red]")
+            return
+        if not is_installed():
+            console.print(f"[yellow]{INSTALL_HINT}[/yellow]")
+            return
+        store = RepoStore()
+        words = rest.split(None, 1)
+        _qe: RepoEntry | None = store.get(words[0]) if words else None
+        question = words[1] if _qe and len(words) > 1 else rest
+        if _qe is None:
+            _qe = store.resolve(None)
+        if _qe is None:
+            console.print("[red]No repo found. Run /repo add <path> first.[/red]")
+            return
+        entry = _qe
+        console.print(f"\n[dim]Querying graph for: {entry.name}...[/dim]")
+        try:
+            result = query(Path(entry.path), question)
+        except RuntimeError as e:
+            console.print(f"[red]✗ Query failed: {e}[/red]")
+            return
+        console.print(f"\n[bold]Graph context:[/bold]\n{result}\n")
+
+    # ── /repo graph ───────────────────────────────────────────────────────
+    elif sub == "graph":
+        store = RepoStore()
+        name_arg = rest or None
+        _entry2 = store.resolve(name_arg)
+        if not _entry2:
+            console.print("[red]No repo found. Run /repo add <path> first.[/red]")
+            return
+        entry = _entry2
+        try:
+            open_graph(Path(entry.graph_dir))
+            console.print(f"[green]✓ Opened graph for {entry.name} in browser.[/green]")
+        except FileNotFoundError as e:
+            console.print(f"[red]✗ {e}[/red]")
+
+    # ── /repo list ────────────────────────────────────────────────────────
+    elif sub == "list":
+        entries = RepoStore().load()
+        if not entries:
+            console.print("[dim]No repos indexed. Use /repo add <path> to index one.[/dim]")
+            return
+        console.print()
+        for repo_e in entries:
+            console.print(f"  [bold cyan]{repo_e.name}[/bold cyan]  [dim]{repo_e.path}[/dim]  indexed {repo_e.indexed_at[:10]}")
+        console.print()
+
+    # ── /repo refresh <name> ──────────────────────────────────────────────
+    elif sub == "refresh":
+        if not is_installed():
+            console.print(f"[yellow]{INSTALL_HINT}[/yellow]")
+            return
+        store = RepoStore()
+        _e = store.resolve(rest or None)
+        if not _e:
+            console.print("[red]Repo not found. Use /repo list to see indexed repos.[/red]")
+            return
+        entry = _e
+        console.print(f"\n[bold]Re-indexing [cyan]{entry.name}[/cyan]...[/bold]\n")
+        try:
+            graph_dir = index(Path(entry.path))
+        except RuntimeError as e:
+            console.print(f"[red]✗ Re-index failed: {e}[/red]")
+            return
+        import datetime
+        updated = RepoEntry(
+            name=entry.name,
+            path=entry.path,
+            graph_dir=str(graph_dir),
+            indexed_at=datetime.datetime.now(tz=datetime.UTC).isoformat(),
+        )
+        store.add(updated)
+        console.print(f"\n[green]✓ {entry.name} re-indexed.[/green]\n")
+
+    # ── /repo remove <name> ───────────────────────────────────────────────
+    elif sub == "remove":
+        if not rest:
+            console.print("[red]Usage: /repo remove <name>[/red]")
+            return
+        store = RepoStore()
+        if not store.get(rest):
+            console.print(f"[red]No repo named '{rest}'. Use /repo list to see all.[/red]")
+            return
+        store.remove(rest)
+        console.print(f"[green]✓ Removed {rest} from the index.[/green]")
+
+    # ── unknown subcommand ────────────────────────────────────────────────
+    else:
+        console.print(
+            "[red]Unknown /repo subcommand.[/red]\n"
+            "Available: add, ask, quick, query, graph, list, refresh, remove"
+        )
+
+
+def _repo_synthesize(console: Console, arg: str, *, no_questions: bool) -> None:
+    """
+    Query the graphify knowledge graph then run the PromptForge pipeline.
+    arg may start with a repo name: "/repo ask my-api how does auth work"
+    """
+    from promptforge.repo.bridge import query
+    from promptforge.repo.store import RepoStore
+
+    store = RepoStore()
+    words = arg.split(None, 1)
+    entry = store.get(words[0]) if words else None
+    question = words[1].strip() if entry and len(words) > 1 else arg
+    if not entry:
+        entry = store.resolve(None)
+    if not entry:
+        console.print("[red]No repo found. Run /repo add <path> first.[/red]")
+        return
+
+    console.print(f"\n[dim]Querying knowledge graph: {entry.name}...[/dim]")
+    try:
+        graph_context = query(Path(entry.path), question)
+    except RuntimeError as e:
+        console.print(f"[red]✗ Graph query failed: {e}[/red]")
+        return
+
+    if not graph_context:
+        console.print("[yellow]⚠ graphify returned no context for that question.[/yellow]")
+        graph_context = "(no graph context found)"
+
+    # Build combined prompt: graph context as "input", question as "task"
+    combined = (
+        f"Question: {question}\n\n"
+        f"Repository: {entry.name} ({entry.path})\n\n"
+        f"Relevant code context from knowledge graph:\n"
+        f"{graph_context}"
+    )
+
+    console.print("[dim]Graph context retrieved — running prompt synthesis...[/dim]\n")
+    _repl_run(combined, diff=False, batch=False, no_questions=no_questions)
 
 
 def _show_welcome() -> None:
